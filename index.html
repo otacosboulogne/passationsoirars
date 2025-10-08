@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CONTRÔLE PASSATION SOIR</title>
+  <style>
+    :root{
+      --ink:#111; --muted:#666; --line:#1a1a1a; --bg:#fff;
+      --ok-bg:#e3f2fd; --ok-accent:#1565c0;
+      --todo-bg:#ffebee; --todo-accent:#c62828;
+      --passation-bg:#e3f2fd;
+    }
+    html,body{height:100%}
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      color:var(--ink); background:var(--bg); margin:0;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+
+    .page{ max-width:980px; margin:24px auto; padding:24px; background:var(--passation-bg); border-radius:10px; }
+    h1{ text-align:center; letter-spacing:.5px; font-size:24px; margin:0 0 18px; }
+
+    .grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+    @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+    .block{ background:#fff; border:2px solid var(--line); border-radius:6px; padding:10px 10px 6px; page-break-inside:avoid; }
+    .block h2{ font-size:16px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.5px; }
+
+    /* --- Tableau compact + colonnes étroites --- */
+    table.check{ border-collapse:collapse; width:100%; table-layout:fixed; font-size:11px; color:var(--ink); }
+    table.check th, table.check td{ border:1px solid #ccc; padding:4px 6px; vertical-align:top; background:#fff; }
+    table.check th{ background:#f2f2f2; font-weight:700; text-align:left; color:var(--ink); }
+    table.check th:nth-child(2), table.check td:nth-child(2),
+    table.check th:nth-child(3), table.check td:nth-child(3){ width:64px; text-align:center; white-space:nowrap; }
+    table.check th:first-child, table.check td:first-child{ white-space:normal; word-break:break-word; hyphens:auto; line-height:1.25; }
+
+    .head-todo{ background:var(--todo-bg)!important; color:var(--todo-accent); border-color:var(--todo-accent)!important; }
+    .head-ok{ background:var(--ok-bg)!important; color:var(--ok-accent); border-color:var(--ok-accent)!important; }
+    .is-todo td{ background:var(--todo-bg); } .is-ok td{ background:var(--ok-bg); }
+
+    .is-required td:first-child, .is-required td:first-child *{ color:var(--todo-accent)!important; font-weight:700; }
+
+    .notes{ margin-top:16px; border:2px solid var(--line); border-radius:6px; padding:10px; background:#fff; }
+    .notes h3{ margin:0 0 6px; font-size:14px; text-transform:uppercase; }
+    .notes textarea{ width:100%; min-height:90px; border:1px solid #ccc; border-radius:4px; padding:8px; font-family:inherit; font-size:13px; }
+
+    .flex{ display:flex; gap:12px; flex-wrap:wrap; }
+    .flex .field{ flex:1 1 220px; }
+    .field label{ display:block; font-size:12px; color:#333; margin:8px 0 4px; }
+    .field input, .field textarea, .field select{ width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px; }
+
+    /* Radios pastilles ○ / ● (compat iOS/PDF) */
+    .radio-row{ display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+    .radio-option{ display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--ink); white-space:nowrap; }
+    .radio-option input[type="radio"]{ position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
+    .r-bullet::before{ content:'○'; display:inline-block; font-size:14px; line-height:1; }
+    .radio-option input[type="radio"]:checked + .r-bullet::before{ content:'●'; font-weight:700; }
+    .r-text{ margin-left:4px; }
+
+    .footer{ display:grid; gap:12px; grid-template-columns:1fr 1fr; margin-top:16px; }
+    @media (max-width:700px){ .footer{ grid-template-columns:1fr; } }
+
+    .submitbar{ display:flex; gap:12px; align-items:center; justify-content:flex-end; margin-top:18px; }
+    button[type="submit"]{ background:#111; color:#fff; border:none; border-radius:6px; padding:10px 16px; font-weight:700; cursor:pointer; }
+    button[type="submit"][disabled]{ opacity:.45; cursor:not-allowed; }
+    button[type="reset"]{ display:none!important; }
+    input[disabled]{ opacity:.35; cursor:not-allowed; }
+
+    .form-message{ margin-top:15px; padding:12px; border-radius:6px; font-weight:bold; text-align:center; }
+    .form-message.success{ background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+    .form-message.error{ background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
+    .form-message .retry{ margin-left:10px; padding:6px 10px; border:0; border-radius:5px; background:#111; color:#fff; cursor:pointer; }
+
+    /* Grand message de succès */
+    .success-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; }
+    .success-card{ background:#fff; border-radius:12px; max-width:560px; width:100%; text-align:center; padding:24px 20px; box-shadow:0 12px 40px rgba(0,0,0,.25); }
+    .success-card h3{ margin:0 0 10px; font-size:22px; }
+    .success-card p{ margin:0; font-size:14px; }
+    .success-card .ok{ margin-top:16px; padding:10px 16px; border:none; border-radius:8px; background:#2e7d32; color:#fff; font-weight:700; cursor:pointer; }
+    .hidden{ display:none !important; }
+
+    @media print{
+      body{background:#fff}
+      .page{margin:0;padding:0;background:#fff}
+      .submitbar{display:none}
+      a[href]:after{content:""}
+    }
+  
+/* Repas employés table */
+.repas-table{width:100%;border-collapse:collapse;margin-top:8px}
+.repas-table th,.repas-table td{border:1px solid var(--line);padding:8px}
+.repas-table thead th{background:var(--ok-bg);text-align:left}
+.repas-table td.center{text-align:center}
+.repas-table input[type="text"]{width:100%;box-sizing:border-box;padding:6px}
+
+
+/* Validation + radios Repas */
+.repas-field .form-error{margin-top:6px;font-size:0.95rem;color:#c62828;display:none}
+.repas-field.error .form-error{display:block}
+.repas-field.error .repas-table{outline:2px solid #c62828;outline-offset:2px}
+.repas-table input[type="radio"]{width:18px;height:18px}
+
+
+/* Repas employés - layout */
+.repas-field label{font-weight:600;margin-bottom:6px;display:block}
+.repas-table{width:100%;border-collapse:collapse;margin-top:6px;table-layout:fixed}
+.repas-table th,.repas-table td{border:1px solid var(--line);padding:8px;vertical-align:middle;background:#fff}
+.repas-table thead th{background:var(--ok-bg);text-align:left}
+.repas-table td.center{text-align:center}
+.repas-table input[type="text"]{width:100%;box-sizing:border-box;padding:8px;height:36px}
+.repas-table input[type="radio"]{width:18px;height:18px}
+
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>CONTRÔLE PASSATION SOIR</h1>
+
+    <form id="passationForm">
+      <div class="grid" id="sections"></div>
+
+      <div class="notes">
+        <h3>Commentaires & informations</h3>
+        <div class="flex">
+          <div class="field" style="flex:1 1 100%">
+            <label for="commentaires">Commentaires et informations diverses (Information importante / personnel / incident caisse / technique)</label>
+            <textarea id="commentaires" name="commentaires" placeholder="Saisir ici..."></textarea>
+          </div>
+          <div class="field" style="flex:1 1 100%">
+            <label for="ruptures">Préciser ici les prochaines ruptures</label>
+            <textarea id="ruptures" name="ruptures" placeholder="Produits à risque de rupture, quantités restantes, etc..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="block">
+          <h2>Informations importantes</h2>
+          <div class="flex">
+            <div class="field">
+              <label for="nombrePertesConception">Nombre de pertes de conception en cuisine durant ton service</label>
+              <input id="nombrePertesConception" name="nombrePertesConception" type="number" inputmode="numeric" min="0" step="1" placeholder="0" / required>
+            </div>
+            <div class="field">
+              
+
+
+<div id="repas-employes" class="field repas-field" style="flex:1 1 420px;min-width:360px">
+  <label>Repas employés</label>
+  <table class="repas-table" aria-label="Repas employés">
+    <colgroup>
+      <col style="width:60%">
+      <col style="width:20%">
+      <col style="width:20%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Nom du salarié</th>
+        <th>Tacos</th>
+        <th>Finger Food</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><input type="text" name="employe_nom_1" placeholder="Nom et prénom" aria-label="Nom du salarié 1"></td>
+        <td class="center"><input type="radio" name="employe_1_repas" value="tacos" aria-label="Tacos - Salarié 1"></td>
+        <td class="center"><input type="radio" name="employe_1_repas" value="finger" aria-label="Finger Food - Salarié 1"></td>
+      </tr>
+      <tr>
+        <td><input type="text" name="employe_nom_2" placeholder="Nom et prénom" aria-label="Nom du salarié 2"></td>
+        <td class="center"><input type="radio" name="employe_2_repas" value="tacos" aria-label="Tacos - Salarié 2"></td>
+        <td class="center"><input type="radio" name="employe_2_repas" value="finger" aria-label="Finger Food - Salarié 2"></td>
+      </tr>
+      <tr>
+        <td><input type="text" name="employe_nom_3" placeholder="Nom et prénom" aria-label="Nom du salarié 3"></td>
+        <td class="center"><input type="radio" name="employe_3_repas" value="tacos" aria-label="Tacos - Salarié 3"></td>
+        <td class="center"><input type="radio" name="employe_3_repas" value="finger" aria-label="Finger Food - Salarié 3"></td>
+      </tr>
+      <tr>
+        <td><input type="text" name="employe_nom_4" placeholder="Nom et prénom" aria-label="Nom du salarié 4"></td>
+        <td class="center"><input type="radio" name="employe_4_repas" value="tacos" aria-label="Tacos - Salarié 4"></td>
+        <td class="center"><input type="radio" name="employe_4_repas" value="finger" aria-label="Finger Food - Salarié 4"></td>
+      </tr>
+       <tr>
+        <td><input type="text" name="employe_nom_5" placeholder="Nom et prénom" aria-label="Nom du salarié 5"></td>
+        <td class="center"><input type="radio" name="employe_5_repas" value="tacos" aria-label="Tacos - Salarié 5"></td>
+        <td class="center"><input type="radio" name="employe_5_repas" value="finger" aria-label="Finger Food - Salarié 5"></td>
+      </tr>
+      <tr>
+        <td><input type="text" name="employe_nom_6" placeholder="Nom et prénom" aria-label="Nom du salarié 6"></td>
+        <td class="center"><input type="radio" name="employe_6_repas" value="tacos" aria-label="Tacos - Salarié 6"></td>
+        <td class="center"><input type="radio" name="employe_6_repas" value="finger" aria-label="Finger Food - Salarié 6"></td>
+      </tr>
+       <tr>
+        <td><input type="text" name="employe_nom_7" placeholder="Nom et prénom" aria-label="Nom du salarié 7"></td>
+        <td class="center"><input type="radio" name="employe_7_repas" value="tacos" aria-label="Tacos - Salarié 7"></td>
+        <td class="center"><input type="radio" name="employe_7_repas" value="finger" aria-label="Finger Food - Salarié 7"></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="form-error" aria-live="polite"></p>
+</div>
+
+
+<label>Pertes jetées à la poubelle</label>
+              <div class="radio-row" role="radiogroup" aria-label="Pertes jetées">
+                <label class="radio-option">
+                  <input type="radio" name="Pertesjetees" value="Oui" required>
+                  <span class="r-bullet" aria-hidden="true"></span><span class="r-text">Oui</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="Pertesjetees" value="Non">
+                  <span class="r-bullet" aria-hidden="true"></span><span class="r-text">Non</span>
+                </label>
+              </div>
+            </div>
+            <div class="field" style="flex:1 1 280px">
+              <label>les pertes saisies sur le téléphone</label>
+              <div class="radio-row" role="radiogroup" aria-label="pertes saisies">
+                <label class="radio-option">
+                  <input type="radio" name="pertessaisies" value="Oui" required>
+                  <span class="r-bullet" aria-hidden="true"></span><span class="r-text">Oui</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="pertessaisies" value="Non">
+                  <span class="r-bullet" aria-hidden="true"></span><span class="r-text">Non</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="block">
+          <h2>Informations de passation</h2>
+          <div class="flex">
+            <div class="field"><label for="date">Date</label><input id="date" name="date" type="date" required /></div>
+            <div class="field"><label for="heure">Heure</label><input id="heure" name="heure" type="time" required /></div>
+            <div class="field" style="flex:1 1 280px"><label for="respUnique">Nom du responsable</label><input id="respUnique" name="responsable" type="text" required /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="submitbar">
+        <button type="submit">Envoyer la checklist</button>
+      </div>
+    </form>
+
+    <div id="formMessageContainer"></div>
+  </div>
+
+  <!-- Grand message de succès -->
+  <div id="successOverlay" class="success-overlay hidden" role="dialog" aria-modal="true">
+    <div class="success-card">
+      <h3 id="successTitle">Merci !</h3>
+      <p id="successDetails">La passation est enregistrée.</p>
+      <button class="ok" onclick="document.getElementById('successOverlay').classList.add('hidden')">OK</button>
+    </div>
+  </div>
+
+  <!-- Sections dynamiques -->
+  <script>
+    const SECTIONS = [
+      { title: "Terrasse", tasks: ["tables et chaises rangées","Palettes sorties si dimanche/lundi/mercredi soir","Poubelles sorties si lundi/jeudi soir"]},
+      { title: "Toilettes Clients", tasks: ["Papier + savon en suffisance","Sol propre","Toilettes propres","Sèche mains fonctionnel"]},
+      { title: "Cuisine", tasks: ["Tout le matériel sale en plonge","Essuie-mains, savon en suffisance","Sauces propres, couvertes et placées en CF+","Tracabilité prise","Production notée","Pertes comptabilisées sur le téléphone + erreurs de conception","Galettes descendues","Friteuses filtrées et éteintes","Tablettes badgeuse en charge","Filmer les suppléments et galettes + étiquette DLC","les deux Fours en nettoyage","Toaster démonté"]},
+      { title: "Chambres froides / Frigos", tasks: ["Décongélations préparées","Frigo 1 + 2 propres","Caillebottis propres CF-","Etagères propres","Produits remontés / rotations faites","Produits filmés","DLC du jour vérifiées"]},
+      { title: "Salle", tasks: ["Flammes + pieds rentrés","Musique éteinte","Plateaux propres et dressés","Ecrans TV éteints"]},
+      { title: "Comptoir", tasks: ["Frigos à boissons remplis","Comptoir à desserts rempli","Toppings couverts","DLC du lendemain contrôlées et signalées si besoin","Lait, chantilly + décongélations placés en vitrine/frigo","Présence pailles/serviettes/gobelets/emballages…","Tablette Uber + musique et TPE en charge","Dispo des télécommandes, agrafeuse, téléphone","Vaisselle propre","Savon, essuie-main en suffisance","Produits d'entretien en suffisance","Vaisselle réutilisable récupérée","caisse comptées","Monnaie suffisante lendemain (prévenir manager sinon"]},
+      { title: "Réserves", tasks: ["Rangement","Sol et étagères propres","FIFO / DLC"]},
+      { title: "Étage", tasks: ["Sol propre","Toilettes, lavabo, murs propres","Savon, essuie-mains en suffisance","Poubelles non-pleines","Fenêtre du bureau fermée"]},
+      { title: "Plonge", tasks: ["Produits lessiviels en suffisance (bidons dilués)","Les sacs poubelles en suffisance"]},
+      { title: "E-Pack Hygiène", tasks: ["Nettoyage des postes rempli","Check-list manager remplie","Température + polarité des huiles renseignées"]},
+      { title: "Extinction des appareils", tasks: ["Chauffage ou climatisation","Friteuses","Hotte","Meuble chaud/froid/maintien chaud/toaster","Lumières aux étages","Machine à glaces en veille","Lumière vitrine et logo comptoir","Placer la clé sur l’interrupteur de la lumière"]}
+    ];
+
+    const OK_ONLY = new Map([
+      ["Cuisine", new Set(["Tout le matériel sale en plonge","Sauces propres, couvertes et placées en CF+","Production notée","Pertes comptabilisées sur le téléphone + erreurs de conception","Friteuses filtrées et éteintes","Tablettes badgeuse en charge","Filmer les suppléments et galettes + étiquette DLC"])],
+      ["Salle", new Set(["Flammes + pieds rentrés","Musique éteinte"])],
+      ["Terrasse", new Set(["Palettes sorties si dimanche/lundi/mercredi soir","Poubelles sorties si lundi/jeudi soir"])],
+      ["Plonge", new Set(["Produits lessiviels en suffisance (bidons dilués)"])],
+      ["Chambres froides / Frigos", new Set(["Décongélations préparées","Produits filmés","DLC du jour vérifiées"])],
+      ["Comptoir", new Set(["Frigos à boissons remplis","Toppings couverts","Lait, chantilly + décongélations placés en vitrine","Tablette Uber + musique et TPE en charge","Dispo des télécommandes, agrafeuse, téléphone","Produits d'entretien en suffisance","caisse comptées"])],
+      ["E-Pack Hygiène", new Set(["Nettoyage des postes rempli","Check-list manager remplie","Température + polarité des huiles renseignées"])],
+      ["Extinction des appareils", new Set(["Chauffage ou climatisation","Friteuses","Hotte","Meuble chaud/froid/maintien chaud/toaster","Lumières aux étages","Machine à glaces en veille","Lumière vitrine et logo comptoir","Placer la clé sur l’interrupteur de la lumière"])]
+    ]);
+
+    function isOkOnly(sectionTitle, taskText){
+      return OK_ONLY.has(sectionTitle) && OK_ONLY.get(sectionTitle).has(taskText);
+    }
+
+    const sectionsRoot = document.getElementById('sections');
+
+    function buildStandardBlock(section){
+      const block = document.createElement('section'); block.className='block';
+      const h = document.createElement('h2'); h.textContent = section.title.toUpperCase();
+
+      const table = document.createElement('table'); table.className='check';
+      const thead = document.createElement('thead');
+      thead.innerHTML = `<tr>
+        <th>Tâche</th>
+        <th class="head-todo">À FAIRE</th>
+        <th class="head-ok">OK</th>
+      </tr>`;
+      const tbody = document.createElement('tbody');
+
+      section.tasks.forEach((task, tIdx) => {
+        const id = `${section.title.replace(/[^a-z0-9]/gi,'_').toLowerCase()}_${tIdx}`;
+        const onlyOk = isOkOnly(section.title, task);
+
+        const tr = document.createElement('tr');
+        if (onlyOk) tr.classList.add('is-required');
+
+        tr.innerHTML = `
+          <td>${task}</td>
+          <td>${
+            onlyOk
+              ? `<label class="radio-option" title="Non disponible pour cette tâche">
+                   <input type="radio" disabled>
+                   <span class="r-bullet" aria-hidden="true"></span>
+                 </label>`
+              : `<label class="radio-option">
+                   <input type="radio" name="${id}" value="A faire" aria-label="${task} - À faire">
+                   <span class="r-bullet" aria-hidden="true"></span>
+                 </label>`
+          }</td>
+          <td>
+            <label class="radio-option">
+              <input type="radio" name="${id}" value="OK" aria-label="${task} - OK">
+              <span class="r-bullet" aria-hidden="true"></span>
+            </label>
+          </td>
+        `;
+
+        tr.addEventListener('change', (e) => {
+          if(e.target.name === id){
+            tr.classList.remove('is-todo','is-ok');
+            if(e.target.value === 'A faire') tr.classList.add('is-todo');
+            if(e.target.value === 'OK')      tr.classList.add('is-ok');
+          }
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead); table.appendChild(tbody);
+      block.appendChild(h); block.appendChild(table);
+      return block;
+    }
+
+    function buildObjectifBlock(){
+      const block = document.createElement('section'); block.className='block';
+      const h = document.createElement('h2'); h.textContent = 'OBJECTIF';
+
+      const table = document.createElement('table'); table.className='check';
+      const thead = document.createElement('thead');
+      thead.innerHTML = `<tr><th>Élément</th><th class="head-ok">Oui</th><th class="head-todo">Non</th></tr>`;
+      const tbody = document.createElement('tbody');
+
+      [
+        { label: "Objectif avis Google donné au salarié en caisse", name: "objectifAvisGoogle" },
+        { label: "Briefing et débriefing effectués", name: "briefingDebriefing" },
+        { label: "Satisfait du service et temps d'attente", name: "satisfaitService" },
+        { label: "effectif suffissant pour le service", name: "satisfaiteffectif" },
+      ].forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.label}</td>
+          <td><label class="radio-option"><input type="radio" name="${r.name}" value="Oui" aria-label="${r.label} - Oui"><span class="r-bullet" aria-hidden="true"></span></label></td>
+          <td><label class="radio-option"><input type="radio" name="${r.name}" value="Non" aria-label="${r.label} - Non"><span class="r-bullet" aria-hidden="true"></span></label></td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead); table.appendChild(tbody);
+      block.appendChild(h); block.appendChild(table);
+      return block;
+    }
+
+    // Génère les sections + insère OBJECTIF après "E-Pack Hygiène"
+    SECTIONS.forEach((section) => {
+      const block = buildStandardBlock(section);
+      sectionsRoot.appendChild(block);
+      if (section.title === "E-Pack Hygiène") sectionsRoot.appendChild(buildObjectifBlock());
+    });
+  </script>
+
+  
+<script>
+(function(){
+  var form = document.getElementById('passationForm');
+  var repas = document.getElementById('repas-employes');
+  function validateRepas(){
+    if (!repas) return true;
+    var anyChecked = repas.querySelector('input[type="radio"]:checked');
+    if (!anyChecked){
+      repas.classList.add('error');
+      var err = repas.querySelector('.form-error');
+      if (err){ err.textContent = 'Êtes-vous sûr qu’aucun salarié n’a pris de repas ? Si oui, mettez à la place du nom "PERSONNE" PUIS COCHER TACOS'; }
+      return false;
+    }
+    repas.classList.remove('error');
+    return true;
+  }
+  if (form){
+    // Submit CAPTURE phase to run before other listeners
+    form.addEventListener('submit', function(e){
+      if (!validateRepas()){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        repas.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    }, true);
+  }
+})();
+</script>
+
+  <!-- libs PDF (séparées pour iOS, évite l’erreur "color") -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.min.js"></script>
+
+  <!-- Envoi -->
+  <script>
+    // <<< URL de ton déploiement WebApp >>>
+    const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxLjY5ZdVC910mh836Wqbr0nymguMFMfLK67hV6GdPUeEZVXWfYO8zGSBXc7XJ7DityOA/exec';
+
+    function showMessage(text, type, withRetry){
+      const c = document.getElementById('formMessageContainer');
+      c.innerHTML = '';
+      const m = document.createElement('div');
+      m.className = 'form-message ' + (type === 'success' ? 'success' : 'error');
+      m.textContent = text;
+      if (withRetry){
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'retry'; b.textContent = 'Réessayer';
+        b.onclick = () => document.querySelector('#passationForm button[type="submit"]').click();
+        m.appendChild(b);
+      }
+      c.appendChild(m);
+    }
+
+    function blobToBase64(blob){
+      return new Promise((resolve)=>{ const r=new FileReader(); r.onloadend=()=>resolve(r.result.split(',')[1]); r.readAsDataURL(blob); });
+    }
+
+    function makeKey(meta){
+      const d = meta.date || new Date().toISOString().slice(0,10);
+      const r = (meta.responsable||'').trim().toLowerCase();
+      return `passation-sent-${d}-${r}`;
+    }
+
+    async function makePdfBlob(page){
+      const opt = {
+        margin: [5, 10, 10, 10],                 // marge top réduite
+        pagebreak: { mode: 'avoid', avoid: '.page' }, // pas de saut juste après .page
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          scrollY: 0,                            // évite la page blanche iOS
+          onclone: (doc) => {
+            const s = doc.createElement('style');
+            s.textContent = `
+              * { -webkit-appearance: none !important; appearance: none !important; }
+              input, select, textarea { background:#fff !important; color:#111 !important; }
+            `;
+            doc.head.appendChild(s);
+
+            // Supprimer la marge/arrondi du conteneur dans le clone pour éviter une "fausse" 1ère page
+            const pageEl = doc.querySelector('.page');
+            if (pageEl){
+              pageEl.style.margin = '0';
+              pageEl.style.background = '#fff';
+              pageEl.style.borderRadius = '0';
+            }
+
+            // compacter le tableau dans le clone
+            doc.querySelectorAll('table.check').forEach(t=>{
+              t.style.tableLayout = 'fixed';
+              t.style.width = '100%';
+              t.style.fontSize = '11px';
+            });
+            doc.querySelectorAll('table.check th, table.check td').forEach(c=>{
+              c.style.padding = '4px 6px';
+            });
+            doc.querySelectorAll('table.check th:nth-child(2), table.check td:nth-child(2), table.check th:nth-child(3), table.check td:nth-child(3)').forEach(c=>{
+              c.style.width = '64px';
+              c.style.whiteSpace = 'nowrap';
+              c.style.textAlign = 'center';
+            });
+            doc.querySelectorAll('table.check th:first-child, table.check td:first-child').forEach(c=>{
+              c.style.whiteSpace = 'normal';
+              c.style.wordBreak  = 'break-word';
+              c.style.hyphens    = 'auto';
+              c.style.lineHeight = '1.25';
+            });
+
+            // valeurs figées
+            ['date','time','number','text'].forEach(type=>{
+              doc.querySelectorAll(`input[type="${type}"]`).forEach(el=>{
+                el.setAttribute('value', el.value || '');
+              });
+            });
+            doc.querySelectorAll('textarea').forEach(t=>{
+              const v = t.value || '';
+              const repl = doc.createElement('div');
+              repl.style.whiteSpace = 'pre-wrap';
+              repl.style.border = '1px solid #ccc';
+              repl.style.borderRadius = '4px';
+              repl.style.padding = '8px';
+              repl.textContent = v;
+              t.parentNode.replaceChild(repl, t);
+            });
+          }
+        },
+        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+      };
+      return await html2pdf().set(opt).from(page).output('blob');
+    }
+
+    let formAlreadySent = false;
+
+    document.getElementById('passationForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+
+      const form = e.target;
+      const btn  = form.querySelector('button[type="submit"]');
+
+      const meta = {
+        date: form.date.value,
+        heure: form.heure.value,
+        responsable: (form.respUnique?.value || form.responsable?.value || '').trim(),
+        ruptures: (form.ruptures?.value || '').trim()
+      };
+
+      const key = makeKey(meta);
+      if (formAlreadySent || localStorage.getItem(key)){
+        showMessage('⚠️ Ce formulaire a déjà été envoyé.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      const page = document.querySelector('.page');
+      const submitbar = document.querySelector('.submitbar');
+      const prevDisplay = submitbar.style.display;
+      submitbar.style.display = 'none';
+
+      try{
+        const pdfBlob = await makePdfBlob(page);
+        submitbar.style.display = prevDisplay;
+
+        // côté serveur: nom/dossier sont gérés par Apps Script
+        const b64 = await blobToBase64(pdfBlob);
+        const body = new URLSearchParams({ data: JSON.stringify({ b64, meta }) });
+
+        const res = await fetch(WEBAPP_URL, { method:'POST', body });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const txt = await res.text();
+        let json; try{ json = JSON.parse(txt); } catch{ throw new Error('Réponse non-JSON'); }
+        if (json.status !== 'ok') throw new Error(json.message || 'Erreur serveur');
+
+        // Succès : verrouiller + grand message
+        formAlreadySent = true;
+        localStorage.setItem(key, '1');
+
+        const title = document.getElementById('successTitle');
+        const details = document.getElementById('successDetails');
+        title.textContent = `Merci ${meta.responsable || ''} !`;
+        details.textContent = `La passation a bien été enregistrée${json.folder ? ' dans '+json.folder : ''}${json.name ? ' sous le nom '+json.name : ''}.`;
+        document.getElementById('successOverlay').classList.remove('hidden');
+
+      }catch(err){
+        submitbar.style.display = prevDisplay;
+        btn.disabled = false;              // ré-activer pour réessayer
+        console.error(err);
+        showMessage('❌ Échec de l’envoi : ' + err.message, 'error', true); // bouton Réessayer
+      }
+    });
+  </script>
+</body>
+</html>
