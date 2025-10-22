@@ -145,6 +145,10 @@
   <label for="detailsPertesConception">Détail des pertes de conception</label>
   <textarea id="detailsPertesConception" name="detailsPertesConception" placeholder="Précisez les produits ou erreurs..."></textarea>
 </div>
+              <div id="detailPertesConception" class="field" style="display:none;">
+  <label for="detailsPertesConception">Détail des pertes de conception</label>
+  <textarea id="detailsPertesConception" name="detailsPertesConception" placeholder="Précisez les produits ou erreurs..."></textarea>
+</div>
             </div>
             <div class="field">
               
@@ -179,6 +183,7 @@
   </button>
   <p class="form-error" aria-live="polite"></p>
 </div>
+
 
 <label>Pertes jetées à la poubelle</label>
               <div class="radio-row" role="radiogroup" aria-label="Pertes jetées">
@@ -614,6 +619,86 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
   <script>
+document.addEventListener("DOMContentLoaded", function() {
+  const pertesInput = document.getElementById("nombrePertesConception");
+  const detailField = document.getElementById("detailPertesConception");
+  const detailTextarea = document.getElementById("detailsPertesConception");
+
+  // 🧮 Afficher ou masquer le champ selon la valeur
+  pertesInput.addEventListener("input", function() {
+    const value = parseInt(pertesInput.value, 10);
+    if (!isNaN(value) && value > 0) {
+      detailField.style.display = "block";
+      detailTextarea.setAttribute("required", "required");
+    } else {
+      detailField.style.display = "none";
+      detailTextarea.removeAttribute("required");
+      detailTextarea.value = "";
+    }
+  });
+});
+</script>
+  <script>
+document.addEventListener("DOMContentLoaded", function() {
+  const repasBody = document.getElementById("repas-body");
+  const addBtn = document.getElementById("add-repas");
+  const repasField = document.getElementById("repas-employes");
+  let count = 1;
+
+  // ➕ Ajouter une nouvelle ligne
+  addBtn.addEventListener("click", function() {
+    count++;
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><input type="text" name="employe_nom_${count}" placeholder="Nom et prénom" aria-label="Nom du salarié ${count}"></td>
+      <td class="center"><input type="radio" name="employe_${count}_repas" value="tacos"></td>
+      <td class="center"><input type="radio" name="employe_${count}_repas" value="finger"></td>
+      <td class="center"><button type="button" class="remove-row" style="background:#c62828;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;">🗑️</button></td>
+    `;
+    repasBody.appendChild(row);
+  });
+
+  // 🗑️ Supprimer une ligne
+  repasBody.addEventListener("click", function(e) {
+    if (e.target.classList.contains("remove-row")) {
+      const row = e.target.closest("tr");
+      // Empêche de supprimer la dernière ligne restante
+      if (repasBody.querySelectorAll("tr").length > 1) {
+        row.remove();
+      } else {
+        alert("Il doit rester au moins une ligne !");
+      }
+    }
+  });
+
+  // 🔍 Validation repas : au moins une ligne avec un repas coché
+  const form = document.getElementById("passationForm");
+  form.addEventListener("submit", function(e) {
+    const rows = repasBody.querySelectorAll("tr");
+    let valid = false;
+
+    for (let row of rows) {
+      const nom = row.querySelector('input[type="text"]').value.trim();
+      const checked = row.querySelector('input[type="radio"]:checked');
+      if (nom !== "" && checked) {
+        valid = true;
+        break;
+      }
+    }
+
+    if (!valid) {
+      e.preventDefault();
+      repasField.classList.add("error");
+      const err = repasField.querySelector(".form-error");
+      err.textContent = "Veuillez saisir au moins un repas employé avec un nom et un choix (Tacos ou Finger Food).";
+      repasField.scrollIntoView({behavior:'smooth', block:'center'});
+    } else {
+      repasField.classList.remove("error");
+    }
+  }, true);
+});
+</script>
+<script>
 document.addEventListener("DOMContentLoaded", function() {
   const pertesInput = document.getElementById("nombrePertesConception");
   const detailField = document.getElementById("detailPertesConception");
