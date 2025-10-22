@@ -613,5 +613,25 @@ document.addEventListener("DOMContentLoaded", function() {
   }, true);
 });
 </script>
+  <script>
+document.addEventListener("DOMContentLoaded", function() {
+  const pertesInput = document.getElementById("nombrePertesConception");
+  const detailField = document.getElementById("detailPertesConception");
+  const detailTextarea = document.getElementById("detailsPertesConception");
+
+  // 🧮 Afficher ou masquer le champ selon la valeur
+  pertesInput.addEventListener("input", function() {
+    const value = parseInt(pertesInput.value, 10);
+    if (!isNaN(value) && value > 0) {
+      detailField.style.display = "block";
+      detailTextarea.setAttribute("required", "required");
+    } else {
+      detailField.style.display = "none";
+      detailTextarea.removeAttribute("required");
+      detailTextarea.value = "";
+    }
+  });
+});
+</script>
 </body>
 </html>
